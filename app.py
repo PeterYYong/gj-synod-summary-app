@@ -1,4 +1,4 @@
-import os
+﻿import os
 import uuid
 import time
 import random
@@ -36,12 +36,12 @@ DEFAULT_MODEL = "gpt-5.5"
 
 PROMPT_DIR = Path("prompts")
 PROMPT_FILES = {
-    "나눔 1": PROMPT_DIR / "nanum1_prompt.txt",
-    "나눔 2": PROMPT_DIR / "nanum2_prompt.txt",
+    "조별대화 1": PROMPT_DIR / "nanum1_prompt.txt",
+    "조별대화 2": PROMPT_DIR / "nanum2_prompt.txt",
 }
 MODE_SLUG = {
-    "나눔 1": "nanum1",
-    "나눔 2": "nanum2",
+    "조별대화 1": "nanum1",
+    "조별대화 2": "nanum2",
 }
 
 # 행사 예상 동시 사용량을 고려해 내부 동시 API 요청 상한을 20으로 설정합니다.
@@ -63,7 +63,7 @@ DEFAULT_MAX_OUTPUT_TOKENS = 6000
 
 COMMON_STYLE_RULES = """
 공통 문체 보정 규칙:
-1. 선택된 나눔 프롬프트의 구조와 요구사항을 우선 따르십시오.
+1. 선택된 조별대화 프롬프트의 구조와 요구사항을 우선 따르십시오.
 2. 발표자가 실제로 읽어 줄 수 있는 자연스러운 한국어 문장으로 작성하십시오.
 3. 발화자의 실제 단어와 중요한 문장 맥락은 유지하되, 반복되는 내용은 같은 의미끼리 묶어 정리하십시오.
 4. 본문에는 발화자 이름, 번호, ID, 라벨을 직접 넣지 마십시오.
@@ -93,7 +93,7 @@ def init_session_state() -> None:
     defaults = {
         "session_id": str(uuid.uuid4()),
         "authenticated": False,
-        "selected_mode": "나눔 1",
+        "selected_mode": "조별대화 1",
         "raw_input_text": "",
         "combined_source_text": "",
         "current_summary": "",
@@ -119,7 +119,7 @@ def reset_current_session(keep_auth: bool = True) -> None:
     selectbox/text_area의 widget key는 직접 수정하지 않습니다.
     """
     authenticated = st.session_state.get("authenticated", False)
-    selected_mode = st.session_state.get("selected_mode", "나눔 1")
+    selected_mode = st.session_state.get("selected_mode", "조별대화 1")
 
     st.session_state["session_id"] = str(uuid.uuid4())
     st.session_state["selected_mode"] = selected_mode
@@ -129,9 +129,7 @@ def reset_current_session(keep_auth: bool = True) -> None:
     st.session_state["chat_history"] = []
     st.session_state["prompt_version"] = ""
     st.session_state["created_at"] = datetime.now().isoformat(timespec="seconds")
-    st.session_state["input_version"] = (
-        int(st.session_state.get("input_version", 0)) + 1
-    )
+    st.session_state["input_version"] = int(st.session_state.get("input_version", 0)) + 1
     st.session_state["is_generating"] = False
     st.session_state["is_revising"] = False
     st.session_state["pending_generation"] = False
@@ -162,9 +160,7 @@ def get_model_name() -> str:
 
 
 def get_max_output_tokens() -> int:
-    raw_value = get_secret_value(
-        "OPENAI_MAX_OUTPUT_TOKENS", str(DEFAULT_MAX_OUTPUT_TOKENS)
-    )
+    raw_value = get_secret_value("OPENAI_MAX_OUTPUT_TOKENS", str(DEFAULT_MAX_OUTPUT_TOKENS))
     try:
         return int(raw_value)
     except Exception:
@@ -223,7 +219,7 @@ def render_header(auth_screen: bool = False) -> None:
             font-weight: 700;
             margin-bottom: 1rem;
         ">
-            중요: 나눔 1과 나눔 2는 프롬프트가 다릅니다. 입력 전 반드시 사이드바에서 요약 유형을 확인해 주세요.
+            중요: 조별대화 1과 조별대화 2는 프롬프트가 다릅니다. 입력 전 반드시 사이드바에서 요약 유형을 확인해 주세요.
         </div>
         """,
         unsafe_allow_html=True,
@@ -240,8 +236,8 @@ def render_header(auth_screen: bool = False) -> None:
             font-weight: 700;
             margin-bottom: 1rem;
         ">
-            나눔 유형이 잘못 선택되면 요약문을 생성하지 않습니다.
-            나눔 1은 경험과 마음에 남은 내용을, 나눔 2는 “내가/제가 ~라면, ~하겠습니다” 형식의 실천 다짐을 붙여넣어 주세요.
+            조별대화 유형이 잘못 선택되면 요약문을 생성하지 않습니다.
+            조별대화 1은 경험과 마음에 남은 내용을, 조별대화 2는 “내가/제가 ~라면, ~하겠습니다” 형식의 실천 다짐을 붙여넣어 주세요.
         </div>
         """,
         unsafe_allow_html=True,
@@ -252,7 +248,7 @@ def render_header(auth_screen: bool = False) -> None:
         st.markdown(
             """
             <div style="padding: 0.9rem; border-radius: 0.7rem; background-color: #f8fafc; border: 1px solid #e2e8f0;">
-                <b>나눔 1</b><br>
+                <b>조별대화 1</b><br>
                 말하고 듣기 중심입니다. 참여자들이 나눈 경험, 어려움, 마음에 남은 표현을 정리합니다.
             </div>
             """,
@@ -262,7 +258,7 @@ def render_header(auth_screen: bool = False) -> None:
         st.markdown(
             """
             <div style="padding: 0.9rem; border-radius: 0.7rem; background-color: #f8fafc; border: 1px solid #e2e8f0;">
-                <b>나눔 2</b><br>
+                <b>조별대화 2</b><br>
                 “내가 본당/사제/수도자/봉사자라면, ~~ 하겠다” 형식의 실천 다짐을 정리합니다.
             </div>
             """,
@@ -273,7 +269,7 @@ def render_header(auth_screen: bool = False) -> None:
         """
         <div style="margin-top: 1rem; margin-bottom: 1rem; padding: 0.9rem; border-radius: 0.7rem; background-color: #ecfdf5; border: 1px solid #a7f3d0;">
             <b>활용법</b><br>
-            1. 사이드바에서 <b>나눔 1 / 나눔 2</b>를 먼저 확인합니다.<br>
+            1. 사이드바에서 <b>조별대화 1 / 조별대화 2</b>를 먼저 확인합니다.<br>
             2. 조별대화 원문을 입력창에 붙여넣습니다.<br>
             3. <b>요약 생성</b>을 한 번만 누르고 완료될 때까지 기다립니다.<br>
             4. 생성되는 요약문은 화면에 실시간으로 표시됩니다.<br>
@@ -366,16 +362,14 @@ def build_instructions(mode: str, extra: str = "") -> Tuple[str, str]:
     ]
 
     if extra.strip():
-        parts.append(
-            "\n\n────────────────────────\n추가 편집 지시\n────────────────────────\n"
-        )
+        parts.append("\n\n────────────────────────\n추가 편집 지시\n────────────────────────\n")
         parts.append(extra.strip())
 
     return "\n".join(parts), prompt_name
 
 
 # ============================================================
-# 나눔 유형 사전 검증
+# 조별대화 유형 사전 검증
 # ============================================================
 def normalize_text_for_validation(text: str) -> str:
     """검증용으로 공백과 특수문자 영향을 줄입니다."""
@@ -389,12 +383,12 @@ def count_contains(text: str, keywords: List[str]) -> int:
 
 def detect_nanum_type(source_text: str) -> Tuple[str, Dict[str, int]]:
     """
-    붙여넣은 원문이 나눔 1에 가까운지, 나눔 2에 가까운지 로컬에서 판별합니다.
+    붙여넣은 원문이 조별대화 1에 가까운지, 조별대화 2에 가까운지 로컬에서 판별합니다.
     API 호출 전 실행되므로 비용이 발생하지 않습니다.
 
     핵심:
-    - 나눔 2는 “제가/내가 ~라면, ~하겠습니다” 역할 전환형 표현이 반복됩니다.
-    - 나눔 1은 경험, 장면, 어려움, 마음에 남은 말, 공감/부담 중심입니다.
+    - 조별대화 2는 “제가/내가 ~라면, ~하겠습니다” 역할 전환형 표현이 반복됩니다.
+    - 조별대화 1은 경험, 장면, 어려움, 마음에 남은 말, 공감/부담 중심입니다.
     """
     text = normalize_text_for_validation(source_text)
 
@@ -478,29 +472,27 @@ def detect_nanum_type(source_text: str) -> Tuple[str, Dict[str, int]]:
         "nanum1_structure_count": nanum1_structure_count,
     }
 
-    # 나눔 2는 역할 전환형 표현이 핵심이므로 강하게 판정합니다.
+    # 조별대화 2는 역할 전환형 표현이 핵심이므로 강하게 판정합니다.
     if role_count >= 2 and nanum2_score >= 10:
-        return "나눔 2", evidence
+        return "조별대화 2", evidence
 
-    # 나눔 1은 역할 전환형 표현이 거의 없어야 합니다.
+    # 조별대화 1은 역할 전환형 표현이 거의 없어야 합니다.
     if role_count == 0 and nanum1_score >= 5:
-        return "나눔 1", evidence
+        return "조별대화 1", evidence
 
-    # 역할 전환 표현이 1개라도 있고 나눔2 점수가 높으면 나눔2로 봅니다.
+    # 역할 전환 표현이 1개라도 있고 조별대화2 점수가 높으면 조별대화2로 봅니다.
     if role_count >= 1 and nanum2_score > nanum1_score:
-        return "나눔 2", evidence
+        return "조별대화 2", evidence
 
-    # 경험 중심 표현이 충분하고 역할 전환이 없으면 나눔1로 봅니다.
+    # 경험 중심 표현이 충분하고 역할 전환이 없으면 조별대화1로 봅니다.
     if nanum1_score >= 7 and role_count == 0:
-        return "나눔 1", evidence
+        return "조별대화 1", evidence
 
     return "불명확", evidence
 
 
-def validate_selected_nanum_mode(
-    selected_mode: str, source_text: str
-) -> Tuple[bool, str]:
-    """선택한 나눔 유형과 붙여넣은 원문이 맞는지 확인합니다."""
+def validate_selected_nanum_mode(selected_mode: str, source_text: str) -> Tuple[bool, str]:
+    """선택한 조별대화 유형과 붙여넣은 원문이 맞는지 확인합니다."""
     if not source_text or len(source_text.strip()) < 20:
         return False, "회의록 원문이 너무 짧거나 비어 있습니다."
 
@@ -510,10 +502,10 @@ def validate_selected_nanum_mode(
         return (
             False,
             (
-                "붙여넣은 원문이 나눔 1인지 나눔 2인지 명확하지 않습니다.\n\n"
+                "붙여넣은 원문이 조별대화 1인지 조별대화 2인지 명확하지 않습니다.\n\n"
                 "요약문을 생성하지 않았습니다.\n\n"
-                "나눔 1은 경험·상황·마음에 남은 내용을 중심으로 입력하고, "
-                "나눔 2는 “제가/내가 ~라면, ~하겠습니다” 형식의 역할별 실천 다짐을 입력해 주세요."
+                "조별대화 1은 경험·상황·마음에 남은 내용을 중심으로 입력하고, "
+                "조별대화 2는 “제가/내가 ~라면, ~하겠습니다” 형식의 역할별 실천 다짐을 입력해 주세요."
             ),
         )
 
@@ -523,9 +515,9 @@ def validate_selected_nanum_mode(
             (
                 f"선택이 잘못되었습니다.\n\n"
                 f"현재 선택한 요약 유형은 [{selected_mode}]이지만, 붙여넣은 원문은 [{detected_type}]에 더 가깝습니다.\n\n"
-                "요약문을 생성하지 않았습니다. 사이드바에서 올바른 나눔 유형을 선택한 뒤 다시 실행해 주세요.\n\n"
-                f"판별 참고값: 나눔1 점수={evidence['nanum1_score']}, "
-                f"나눔2 점수={evidence['nanum2_score']}, "
+                "요약문을 생성하지 않았습니다. 사이드바에서 올바른 조별대화 유형을 선택한 뒤 다시 실행해 주세요.\n\n"
+                f"판별 참고값: 조별대화1 점수={evidence['nanum1_score']}, "
+                f"조별대화2 점수={evidence['nanum2_score']}, "
                 f"역할 전환 표현 수={evidence['role_count']}"
             ),
         )
@@ -706,12 +698,12 @@ def call_with_retry(call_fn: Callable[[], str], max_retries: int = 3) -> str:
         except RateLimitError:
             if attempt == max_retries - 1:
                 raise
-            wait = min(30, (2**attempt) + random.random())
+            wait = min(30, (2 ** attempt) + random.random())
             time.sleep(wait)
         except (APITimeoutError, APIConnectionError, APIError):
             if attempt == max_retries - 1:
                 raise
-            wait = min(20, (2**attempt) + random.random())
+            wait = min(20, (2 ** attempt) + random.random())
             time.sleep(wait)
 
     raise RuntimeError("API 요청이 반복 실패했습니다. 잠시 후 다시 시도해 주세요.")
@@ -735,12 +727,9 @@ def call_openai(
     status_box=None,
 ) -> str:
     """OpenAI 호출 래퍼. 스트리밍 우선, 실패 시 비스트리밍 fallback."""
-
     def _call() -> str:
         if status_box is not None:
-            status_box.write(
-                f"동시 요청은 최대 {OPENAI_MAX_CONCURRENT}개까지 처리합니다. 요청이 많으면 잠시 대기할 수 있습니다."
-            )
+            status_box.write(f"동시 요청은 최대 {OPENAI_MAX_CONCURRENT}개까지 처리합니다. 요청이 많으면 잠시 대기할 수 있습니다.")
             status_box.write("요약문을 생성중입니다. 조금만 기다려 주세요.")
             status_box.write("생성되는 내용은 아래에 실시간으로 표시됩니다.")
 
@@ -752,9 +741,7 @@ def call_openai(
             )
         except Exception as exc:
             if status_box is not None:
-                status_box.write(
-                    f"실시간 표시가 지연되어 일반 응답으로 재시도합니다. ({type(exc).__name__})"
-                )
+                status_box.write(f"실시간 표시가 지연되어 일반 응답으로 재시도합니다. ({type(exc).__name__})")
             text = create_response_non_streaming(
                 instructions=instructions,
                 user_input=user_input,
@@ -768,9 +755,7 @@ def call_openai(
 # ============================================================
 # 요약 / 수정 요청
 # ============================================================
-def generate_initial_summary(
-    mode: str, source_text: str, output_placeholder, status_box=None
-) -> str:
+def generate_initial_summary(mode: str, source_text: str, output_placeholder, status_box=None) -> str:
     instructions, _ = build_instructions(mode)
 
     user_input = f"""
@@ -863,13 +848,9 @@ def revise_summary(
 
     if status_box is not None:
         if source_needed:
-            status_box.write(
-                "원문 재검토가 필요한 수정 요청으로 판단하여 원문과 함께 수정합니다."
-            )
+            status_box.write("원문 재검토가 필요한 수정 요청으로 판단하여 원문과 함께 수정합니다.")
         else:
-            status_box.write(
-                "문체 수정 중심 요청으로 판단하여 원문 전체 재전송 없이 현재 요약본 중심으로 수정합니다."
-            )
+            status_box.write("문체 수정 중심 요청으로 판단하여 원문 전체 재전송 없이 현재 요약본 중심으로 수정합니다.")
 
     return call_openai(
         instructions=instructions,
@@ -940,11 +921,9 @@ def render_sidebar() -> str:
     else:
         st.sidebar.warning("인증 필요")
 
-    mode_options = ["나눔 1", "나눔 2"]
-    current_mode = st.session_state.get("selected_mode", "나눔 1")
-    default_index = (
-        mode_options.index(current_mode) if current_mode in mode_options else 0
-    )
+    mode_options = ["조별대화 1", "조별대화 2"]
+    current_mode = st.session_state.get("selected_mode", "조별대화 1")
+    default_index = mode_options.index(current_mode) if current_mode in mode_options else 0
 
     chosen_mode = st.sidebar.selectbox(
         "요약 유형",
@@ -981,9 +960,7 @@ def render_sidebar() -> str:
 
 def render_input_area() -> str:
     st.subheader("1. 조별대화 원문 붙여넣기")
-    st.caption(
-        "파일 업로드는 사용하지 않습니다. 조별대화 원문을 그대로 붙여넣어 주세요."
-    )
+    st.caption("파일 업로드는 사용하지 않습니다. 조별대화 원문을 그대로 붙여넣어 주세요.")
 
     input_key = f"raw_input_area_{st.session_state.get('input_version', 0)}"
     raw_text = st.text_area(
@@ -1009,6 +986,7 @@ def render_input_area() -> str:
     return raw_text.strip()
 
 
+
 def queue_summary_generation() -> None:
     """
     요약 생성 버튼 클릭 즉시 실행되는 callback입니다.
@@ -1020,7 +998,6 @@ def queue_summary_generation() -> None:
         return
     st.session_state["pending_generation"] = True
     st.session_state["is_generating"] = True
-
 
 def render_summary_area(mode: str) -> None:
     st.subheader("2. 요약 생성")
@@ -1078,9 +1055,7 @@ def render_summary_area(mode: str) -> None:
             st.session_state["is_generating"] = False
             return
 
-        is_valid_mode, validation_message = validate_selected_nanum_mode(
-            mode, source_text
-        )
+        is_valid_mode, validation_message = validate_selected_nanum_mode(mode, source_text)
 
         if not is_valid_mode:
             st.session_state["pending_generation"] = False
@@ -1096,16 +1071,10 @@ def render_summary_area(mode: str) -> None:
         live_output = st.empty()
 
         try:
-            with st.status(
-                "요약문을 생성중입니다. 조금만 기다려 주세요.", expanded=True
-            ) as status:
-                status.write("나눔 유형 검증이 완료되었습니다.")
-                status.write(
-                    "요약 생성 요청이 접수되었습니다. 버튼은 생성이 끝날 때까지 비활성화됩니다."
-                )
-                status.write(
-                    f"요청이 몰릴 경우 최대 {OPENAI_MAX_CONCURRENT}개까지 동시에 처리합니다."
-                )
+            with st.status("요약문을 생성중입니다. 조금만 기다려 주세요.", expanded=True) as status:
+                status.write("조별대화 유형 검증이 완료되었습니다.")
+                status.write("요약 생성 요청이 접수되었습니다. 버튼은 생성이 끝날 때까지 비활성화됩니다.")
+                status.write(f"요청이 몰릴 경우 최대 {OPENAI_MAX_CONCURRENT}개까지 동시에 처리합니다.")
                 status.write("생성되는 요약문은 아래에 실시간으로 표시됩니다.")
 
                 summary = generate_initial_summary(
@@ -1134,23 +1103,18 @@ def render_summary_area(mode: str) -> None:
             st.session_state["is_generating"] = False
             st.session_state["pending_generation"] = False
             st.error(f"요약 생성 중 오류가 발생했습니다: {exc}")
-            st.info(
-                "잠시 후 다시 시도하세요. API 일시 오류 또는 네트워크 문제일 수 있습니다."
-            )
+            st.info("잠시 후 다시 시도하세요. API 일시 오류 또는 네트워크 문제일 수 있습니다.")
 
     if st.session_state.get("current_summary"):
         st.subheader("3. 요약 결과")
         st.markdown(st.session_state["current_summary"])
-
 
 def render_chat_area(mode: str) -> None:
     if not st.session_state.get("current_summary"):
         return
 
     st.subheader("4. 수정 요청")
-    st.caption(
-        "현재 요약본을 바탕으로 수정합니다. 단순 문체 수정은 원문 전체를 다시 보내지 않아 비용을 줄입니다."
-    )
+    st.caption("현재 요약본을 바탕으로 수정합니다. 단순 문체 수정은 원문 전체를 다시 보내지 않아 비용을 줄입니다.")
 
     for message in st.session_state.get("chat_history", []):
         role = message.get("role", "assistant")
@@ -1163,9 +1127,7 @@ def render_chat_area(mode: str) -> None:
         st.info("현재 수정 요청을 처리 중입니다. 완료될 때까지 기다려 주세요.")
         return
 
-    user_request = st.chat_input(
-        "수정 요청을 입력하세요. 예: 조금 더 자연스럽게, 참조표는 유지하고 본문만 수정"
-    )
+    user_request = st.chat_input("수정 요청을 입력하세요. 예: 조금 더 자연스럽게, 참조표는 유지하고 본문만 수정")
     if user_request:
         st.session_state["is_revising"] = True
         st.session_state["chat_history"].append(
@@ -1179,9 +1141,7 @@ def render_chat_area(mode: str) -> None:
         live_output = st.empty()
 
         try:
-            with st.status(
-                "수정 요청을 반영하는 중입니다. 조금만 기다려 주세요.", expanded=True
-            ) as status:
+            with st.status("수정 요청을 반영하는 중입니다. 조금만 기다려 주세요.", expanded=True) as status:
                 status.write("수정본이 생성되는 대로 아래에 실시간으로 표시됩니다.")
 
                 revised = revise_summary(
@@ -1210,9 +1170,7 @@ def render_chat_area(mode: str) -> None:
         except Exception as exc:
             st.session_state["is_revising"] = False
             st.error(f"수정 중 오류가 발생했습니다: {exc}")
-            st.info(
-                "잠시 후 다시 시도하세요. API 일시 오류 또는 네트워크 문제일 수 있습니다."
-            )
+            st.info("잠시 후 다시 시도하세요. API 일시 오류 또는 네트워크 문제일 수 있습니다.")
 
 
 def render_download_area(mode: str) -> None:
@@ -1301,3 +1259,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
